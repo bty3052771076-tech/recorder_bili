@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Bilibili直播录制工具
 
 ## 功能特性
@@ -74,3 +75,6 @@ curl -X POST http://localhost:8000/api/record/stop \
 
 ## 输出文件
 录制的视频和弹幕文件将保存在 `outputs/` 目录下，按直播间ID分类存储。
+=======
+# recorder_bili
+>>>>>>> 5371ce387ac6eba3a9d40bc96a1b4c97a3140eb7
