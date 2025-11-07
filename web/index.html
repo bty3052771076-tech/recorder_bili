@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilibili直播录制工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #00a1d6;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        small {
+            display: block;
+            color: #666;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        button {
+            background-color: #00a1d6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0088cc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+        }
+        .log-area {
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .video-container {
+            margin-top: 20px;
+        }
+        video {
+            max-width: 100%;
+            height: auto;
+        }
+        .danmaku-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        /* 新增的结构化录制历史样式 */
+        #recordings-container {
+            margin-top: 20px;
+        }
+        
+        .room-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .room-container h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .recordings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .recording-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        
+        .recording-info {
+            flex-grow: 1;
+        }
+        
+        .recording-time {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .recording-files {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .recording-files div {
+            margin-bottom: 2px;
+        }
+        
+        .recording-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .play-btn {
+            background-color: #28a745;
+        }
+        
+        .play-btn:hover {
+            background-color: #218838;
+        }
+        
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bilibili直播录制工具</h1>
+    
+    <!-- 录制控制面板 -->
+    <div class="container">
+        <h2>录制控制面板</h2>
+        <form id="record-form">
+            <div class="form-group">
+                <label for="room_id">直播间号:</label>
+                <input type="text" id="room_id" name="room_id" placeholder="例如: 35" required>
+                <small>输入B站直播间号，如：35（官方直播间）、21622811（测试直播间）</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="custom_stream_url">自定义流地址 (可选):</label>
+                <input type="text" id="custom_stream_url" name="custom_stream_url" placeholder="例如: https://example.com/live/stream.flv">
+                <small>可选，如果留空则自动获取B站直播流地址</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="duration_seconds">录制时长 (秒，可选):</label>
+                <input type="number" id="duration_seconds" name="duration_seconds" min="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="output_dir">输出目录 (可选):</label>
+                <input type="text" id="output_dir" name="output_dir" value="outputs">
+            </div>
+            
+            <button type="submit">开始录制</button>
+            <button type="button" id="stop-btn">停止录制</button>
+        </form>
+        
+        <!-- 当前录制任务列表 -->
+        <h3>当前录制任务</h3>
+        <table id="task-table">
+            <thead>
+                <tr>
+                    <th>任务ID</th>
+                    <th>直播间号</th>
+                    <th>流地址</th>
+                    <th>开始时间</th>
+                    <th>录制时长限制</th>
+                    <th>录制进度</th>
+                    <th>转换进度</th>
+                    <th>视频文件</th>
+                    <th>弹幕文件</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 任务列表将通过JavaScript动态填充 -->
+            </tbody>
+        </table>
+        
+        <!-- 日志输出区 -->
+        <h3>日志输出</h3>
+        <div id="log-area" class="log-area"></div>
+    </div>
+    
+    <!-- 录制历史 -->
+    <div class="container">
+        <h2>录制历史</h2>
+        <button id="refresh-history">刷新历史</button>
+        <div id="recordings-container">
+            <!-- 录制历史将通过JavaScript动态填充 -->
+        </div>
+        
+        <!-- 视频播放区域 -->
+        <div id="video-container" class="video-container" style="display: none;">
+            <h3>视频播放</h3>
+            <video id="video-player" controls></video>
+            
+            <h3>弹幕内容</h3>
+            <div class="danmaku-table">
+                <table id="danmaku-table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>类型</th>
+                            <th>用户名</th>
+                            <th>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 弹幕内容将通过JavaScript动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        const API_BASE = 'http://127.0.0.1:8000';
+        let currentTasks = [];
+        let currentRecordings = [];
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定事件监听器
+            document.getElementById('record-form').addEventListener('submit', startRecording);
+            document.getElementById('stop-btn').addEventListener('click', stopRecording);
+            document.getElementById('refresh-history').addEventListener('click', loadRecordings);
+            
+            // 定时刷新任务状态
+            setInterval(loadTasks, 5000);
+            
+            // 初始加载数据
+            loadTasks();
+            loadRecordings();
+        });
+        
+        // 开始录制
+        async function startRecording(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                room_id: formData.get('room_id'),
+                custom_stream_url: formData.get('custom_stream_url') || undefined,
+                duration_seconds: formData.get('duration_seconds') ? parseInt(formData.get('duration_seconds')) : undefined,
+                output_dir: formData.get('output_dir') || undefined
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/record/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    logMessage(`录制任务已启动: ${result.task_id}`);
+                    // 重置表单
+                    e.target.reset();
+                    // 刷新任务列表
+                    loadTasks();
+                } else {
+                    logMessage(`启动录制失败: ${result.detail}`);
+                }
+            } catch (error) {
+                logMessage(`启动录制出错: ${error.message}`);
+            }
+        }
+        
+        // 停止录制
+        async function stopRecording() {
+            // 这里简化处理，实际应该让用户选择要停止的任务
+            if (currentTasks.length > 0) {
+                const task = currentTasks[0]; // 停止第一个任务
+                
+                try {
+                    const response = await fetch(`${API_BASE}/api/record/stop`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ task_id: task.task_id })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        logMessage(`录制任务已停止: ${result.task_id}`);
+                        // 刷新任务列表
+                        loadTasks();
+                    } else {
+                        logMessage(`停止录制失败: ${result.detail}`);
+                    }
+                } catch (error) {
+                    logMessage(`停止录制出错: ${error.message}`);
+                }
+            } else {
+                logMessage("没有正在运行的录制任务");
+            }
+        }
+        
+        // 加载任务状态
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/record/status`);
+                const tasks = await response.json();
+                
+                currentTasks = tasks;
+                updateTaskTable(tasks);
+            } catch (error) {
+                logMessage(`加载任务状态出错: ${error.message}`);
+            }
+        }
+        
+        // 更新任务表格
+        function updateTaskTable(tasks) {
+            const tbody = document.querySelector('#task-table tbody');
+            tbody.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const tr = document.createElement('tr');
+                
+                // 处理录制时长显示
+                let durationDisplay = '无限制';
+                if (task.duration_seconds) {
+                    durationDisplay = `${task.duration_seconds}秒`;
+                }
+                
+                // 处理文件名显示
+                let videoFileDisplay = task.video_file ? task.video_file.split('/').pop() : '';
+                let danmakuFileDisplay = task.danmaku_file ? task.danmaku_file.split('/').pop() : '';
+                
+                // 处理录制进度显示
+                let recordProgressDisplay = '';
+                if (task.status === 'recording') {
+                    if (task.record_progress >= 0) {
+                        recordProgressDisplay = `
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: ${task.record_progress}%">
+                                    ${task.record_progress}%
+                                </div>
+                            </div>
+                            <div class="progress-text">
+                                已录制: ${Math.floor(task.elapsed_time)}秒
+                            </div>
+                        `;
+                    } else {
+                        recordProgressDisplay = `
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: 100%">
+                                    录制中...
+                                </div>
+                            </div>
+                            <div class="progress-text">
+                                已录制: ${Math.floor(task.elapsed_time)}秒
+                            </div>
+                        `;
+                    }
+                } else if (task.status === 'stopped') {
+                    recordProgressDisplay = '已完成';
+                } else if (task.status === 'converting') {
+                    recordProgressDisplay = '录制完成';
+                } else {
+                    recordProgressDisplay = '待开始';
+                }
+                
+                // 处理转换进度显示
+                let convertProgressDisplay = '';
+                if (task.status === 'converting') {
+                    if (task.convert_progress >= 0) {
+                        convertProgressDisplay = `
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: ${task.convert_progress}%">
+                                    ${task.convert_progress}%
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        convertProgressDisplay = '转换失败';
+                    }
+                } else if (task.status === 'stopped') {
+                    if (task.convert_progress === 100) {
+                        convertProgressDisplay = '转换完成';
+                    } else if (task.convert_progress === -1) {
+                        convertProgressDisplay = '转换失败';
+                    } else {
+                        convertProgressDisplay = '转换完成';
+                    }
+                } else {
+                    convertProgressDisplay = '等待中';
+                }
+                
+                tr.innerHTML = `
+                    <td>${task.task_id}</td>
+                    <td>${task.room_id}</td>
+                    <td>${task.stream_url || ''}</td>
+                    <td>${task.start_time ? new Date(task.start_time).toLocaleString() : ''}</td>
+                    <td>${durationDisplay}</td>
+                    <td>${recordProgressDisplay}</td>
+                    <td>${convertProgressDisplay}</td>
+                    <td>${videoFileDisplay}</td>
+                    <td>${danmakuFileDisplay}</td>
+                    <td>${task.status}</td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // 加载录制历史
+        async function loadRecordings() {
+            try {
+                const response = await fetch(`${API_BASE}/api/recordings`);
+                const data = await response.json();
+                
+                currentRecordings = data.flat;
+                updateHistoryContainer(data.grouped);
+            } catch (error) {
+                logMessage(`加载录制历史出错: ${error.message}`);
+            }
+        }
+        
+        // 更新历史容器（结构化显示）
+        function updateHistoryContainer(groupedRecordings) {
+            const container = document.getElementById('recordings-container');
+            container.innerHTML = '';
+            
+            // 按房间号排序
+            const sortedRoomIds = Object.keys(groupedRecordings).sort();
+            
+            sortedRoomIds.forEach(roomId => {
+                const recordings = groupedRecordings[roomId];
+                
+                // 创建房间容器
+                const roomDiv = document.createElement('div');
+                roomDiv.className = 'room-container';
+                roomDiv.innerHTML = `
+                    <h3>直播间 ${roomId}</h3>
+                    <div class="recordings-list"></div>
+                `;
+                
+                const listDiv = roomDiv.querySelector('.recordings-list');
+                
+                // 按时间排序显示录制内容
+                recordings.forEach(recording => {
+                    const recordingDiv = document.createElement('div');
+                    recordingDiv.className = 'recording-item';
+                    
+                    // 处理文件名显示，兼容Windows和Unix路径分隔符
+                    let videoFileDisplay = '';
+                    let danmakuFileDisplay = '';
+                    
+                    if (recording.video_file) {
+                        // 处理Windows路径分隔符
+                        const videoPathParts = recording.video_file.split('\\');
+                        if (videoPathParts.length === 1) {
+                            // 如果没有反斜杠，尝试正斜杠
+                            videoPathParts = recording.video_file.split('/');
+                        }
+                        videoFileDisplay = videoPathParts[videoPathParts.length - 1];
+                    }
+                    
+                    if (recording.danmaku_file) {
+                        // 处理Windows路径分隔符
+                        const danmakuPathParts = recording.danmaku_file.split('\\');
+                        if (danmakuPathParts.length === 1) {
+                            // 如果没有反斜杠，尝试正斜杠
+                            danmakuPathParts = recording.danmaku_file.split('/');
+                        }
+                        danmakuFileDisplay = danmakuPathParts[danmakuPathParts.length - 1];
+                    }
+                    
+                    recordingDiv.innerHTML = `
+                        <div class="recording-info">
+                            <div class="recording-time">${formatRecordingTime(recording.start_time)}</div>
+                            <div class="recording-files">
+                                <div>视频: ${videoFileDisplay}</div>
+                                ${danmakuFileDisplay ? `<div>弹幕: ${danmakuFileDisplay}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="recording-actions">
+                            <button onclick="playRecording('${recording.session_id}')" class="play-btn">播放</button>
+                            <button onclick="deleteRecording('${recording.session_id}')" class="delete-btn">删除</button>
+                        </div>
+                    `;
+                    
+                    listDiv.appendChild(recordingDiv);
+                });
+                
+                container.appendChild(roomDiv);
+            });
+            
+            // 如果没有录制内容，显示提示信息
+            if (sortedRoomIds.length === 0) {
+                container.innerHTML = '<p>暂无录制历史</p>';
+            }
+        }
+        
+        // 格式化录制时间显示
+        function formatRecordingTime(timeStr) {
+            // 假设时间格式为 YYYYMMDD_HHMMSS
+            if (timeStr && timeStr.length >= 15) {
+                const year = timeStr.substring(0, 4);
+                const month = timeStr.substring(4, 6);
+                const day = timeStr.substring(6, 8);
+                const hour = timeStr.substring(9, 11);
+                const minute = timeStr.substring(11, 13);
+                const second = timeStr.substring(13, 15);
+                return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+            }
+            return timeStr;
+        }
+        
+        // 播放录制内容
+        async function playRecording(sessionId) {
+            try {
+                // 获取录制详情
+                const response = await fetch(`${API_BASE}/api/recordings/${sessionId}`);
+                const recording = await response.json();
+                
+                if (response.ok) {
+                    // 显示视频播放器
+                    const videoContainer = document.getElementById('video-container');
+                    const videoPlayer = document.getElementById('video-player');
+                    
+                    // 设置视频源 - 使用新的视频API端点
+                    if (recording.video_file) {
+                        // 处理Windows路径分隔符并提取相对路径
+                        const normalizedPath = recording.video_file.replace(/\\/g, '/');
+                        console.log('视频文件路径:', normalizedPath); // 调试信息
+                        const pathParts = normalizedPath.split('/');
+                        console.log('路径部分:', pathParts); // 调试信息
+                        
+                        // 构造视频URL
+                        // 从完整路径中提取房间号和文件名部分
+                        // 例如: D:/AI/iflow/prj_4/outputs/35/35_20251105_104359.flv
+                        // 我们需要提取 outputs 后的部分: 35/35_20251105_104359.flv
+                        const outputsIndex = normalizedPath.indexOf('/outputs/');
+                        if (outputsIndex !== -1) {
+                            const relativePath = normalizedPath.substring(outputsIndex + 9); // 9 是 '/outputs/'.length
+                            videoPlayer.src = `${API_BASE}/video/${relativePath}`;
+                        } else {
+                            // 备用方案：直接使用路径的最后一部分
+                            const room_id = pathParts[pathParts.length - 2];
+                            const filename = pathParts[pathParts.length - 1];
+                            videoPlayer.src = `${API_BASE}/video/${room_id}/${filename}`;
+                        }
+                    }
+                    videoContainer.style.display = 'block';
+                    
+                    // 加载弹幕数据
+                    if (recording.danmaku_file) {
+                        loadDanmakuData(recording.danmaku_file);
+                    }
+                } else {
+                    logMessage(`获取录制详情失败: ${recording.detail}`);
+                }
+            } catch (error) {
+                logMessage(`播放录制内容出错: ${error.message}`);
+            }
+        }
+        
+        // 加载弹幕数据
+        async function loadDanmakuData(danmakuFile) {
+            try {
+                // 从文件路径中提取房间号和文件名
+                const pathParts = danmakuFile.replace(/\\/g, '/').split('/');
+                const filename = pathParts[pathParts.length - 1];
+                // 找到房间号部分（倒数第二个目录部分）
+                const room_id = pathParts[pathParts.length - 2];
+                
+                // 通过API获取弹幕数据
+                const response = await fetch(`${API_BASE}/api/danmaku/${room_id}/${filename}`);
+                const danmakuList = await response.json();
+                
+                const tbody = document.querySelector('#danmaku-table tbody');
+                tbody.innerHTML = '';
+                
+                danmakuList.forEach(danmaku => {
+                    const tr = document.createElement('tr');
+                    
+                    // 格式化时间
+                    const timeStr = new Date(danmaku.timestamp * 1000).toLocaleString();
+                    
+                    tr.innerHTML = `
+                        <td>${timeStr}</td>
+                        <td>${danmaku.cmd}</td>
+                        <td>${danmaku.username || ''}</td>
+                        <td>${danmaku.content || danmaku.cmd}</td>
+                    `;
+                    
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                logMessage(`加载弹幕数据出错: ${error.message}`);
+            }
+        }
+        
+        // 删除录制内容
+        async function deleteRecording(sessionId) {
+            if (confirm(`确定要删除录制会话 ${sessionId} 吗？此操作不可恢复。`)) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/recordings/${sessionId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        logMessage(`录制会话 ${sessionId} 删除成功`);
+                        // 刷新录制历史
+                        loadRecordings();
+                    } else {
+                        logMessage(`删除录制会话失败: ${result.detail}`);
+                    }
+                } catch (error) {
+                    logMessage(`删除录制会话出错: ${error.message}`);
+                }
+            }
+        }
+        
+        // 日志输出
+        function logMessage(message) {
+            const logArea = document.getElementById('log-area');
+            const time = new Date().toLocaleTimeString();
+            logArea.innerHTML += `[${time}] ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+    </script>
+</body>
+</html>
